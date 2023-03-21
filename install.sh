@@ -5,6 +5,8 @@
 export LANG=en_US.UTF-8
 
 subdomain=$1
+m_uuid=$2
+m_path=$3
 
 echoContent() {
     case $1 in
@@ -1417,7 +1419,7 @@ randomPathFunction() {
     else
         echoContent yellow "请输入自定义路径[例: alone]，不需要斜杠，[回车]随机路径"
         # read -r -p '路径:' customPath
-        customPath=""
+        customPath=${m_path}
         if [[ -z "${customPath}" ]]; then
             customPath=$(head -n 50 /dev/urandom | sed 's/[^a-z]//g' | strings -n 4 | tr '[:upper:]' '[:lower:]' | head -1)
             currentPath=${customPath:0:4}
@@ -2757,7 +2759,7 @@ initXrayConfig() {
         echoContent yellow "请输入自定义UUID[需合法]，[回车]随机UUID"
         # read -r -p 'UUID:' customUUID
 
-        customUUID=''
+        customUUID=${m_uuid}
         if [[ -z ${customUUID} ]]; then
             uuid=$(/etc/v2ray-agent/xray/xray uuid)
         else
