@@ -4,6 +4,8 @@
 # 检查系统
 export LANG=en_US.UTF-8
 
+subdomain=$1
+
 echoContent() {
     case $1 in
     # 红色
@@ -189,7 +191,7 @@ initVar() {
     installTLSCount=
 
     # BTPanel状态
-    #	BTPanelStatus=
+    #   BTPanelStatus=
 
     # nginx配置文件路径
     nginxConfigPath=/etc/nginx/conf.d/
@@ -332,7 +334,7 @@ readInstallProtocolType() {
 checkBTPanel() {
     if pgrep -f "BT-Panel"; then
         nginxConfigPath=/www/server/panel/vhost/nginx/
-        #		BTPanelStatus=true
+        #       BTPanelStatus=true
     fi
 }
 # 读取当前alpn的顺序
@@ -626,7 +628,7 @@ installTools() {
         ${installType} epel-release >/dev/null 2>&1
     fi
 
-    #	[[ -z `find /usr/bin /usr/sbin |grep -v grep|grep -w curl` ]]
+    #   [[ -z `find /usr/bin /usr/sbin |grep -v grep|grep -w curl` ]]
 
     if ! find /usr/bin /usr/sbin | grep -q -w wget; then
         echoContent green " ---> 安装wget"
@@ -714,7 +716,8 @@ installTools() {
         nginxVersion=$(nginx -v 2>&1)
         nginxVersion=$(echo "${nginxVersion}" | awk -F "[n][g][i][n][x][/]" '{print $2}' | awk -F "[.]" '{print $2}')
         if [[ ${nginxVersion} -lt 14 ]]; then
-            read -r -p "读取到当前的Nginx版本不支持gRPC，会导致安装失败，是否卸载Nginx后重新安装 ？[y/n]:" unInstallNginxStatus
+            # read -r -p "读取到当前的Nginx版本不支持gRPC，会导致安装失败，是否卸载Nginx后重新安装 ？[y/n]:" unInstallNginxStatus
+            unInstallNginxStatus="y"
             if [[ "${unInstallNginxStatus}" == "y" ]]; then
                 ${removeType} nginx >/dev/null 2>&1
                 echoContent yellow " ---> nginx卸载完成"
@@ -839,8 +842,8 @@ installWarp() {
     warp-cli --accept-tos connect
     warp-cli --accept-tos enable-always-on
 
-    #	if [[]];then
-    #	fi
+    #   if [[]];then
+    #   fi
     # todo curl --socks5 127.0.0.1:31303 https://www.cloudflare.com/cdn-cgi/trace
     # systemctl daemon-reload
     # systemctl enable cloudflare-warp
@@ -851,19 +854,24 @@ initTLSNginxConfig() {
     echoContent skyBlue "\n进度  $1/${totalProgress} : 初始化Nginx申请证书配置"
     if [[ -n "${currentHost}" ]]; then
         echo
-        read -r -p "读取到上次安装记录，是否使用上次安装时的域名 ？[y/n]:" historyDomainStatus
+        # read -r -p "读取到上次安装记录，是否使用上次安装时的域名 ？[y/n]:" historyDomainStatus
+        historyDomainStatus="n"
         if [[ "${historyDomainStatus}" == "y" ]]; then
             domain=${currentHost}
             echoContent yellow "\n ---> 域名: ${domain}"
         else
             echo
             echoContent yellow "请输入要配置的域名 例: www.v2ray-agent.com --->"
-            read -r -p "域名:" domain
+            # read -r -p "域名:" domain
+            domain=${subdomain}
+            echo "domain is ${domain}"
         fi
     else
         echo
         echoContent yellow "请输入要配置的域名 例: www.v2ray-agent.com --->"
-        read -r -p "域名:" domain
+        # read -r -p "域名:" domain
+        domain=${subdomain}
+        echo "domain is ${domain}"
     fi
 
     if [[ -z ${domain} ]]; then
@@ -886,19 +894,19 @@ server {
     server_name ${domain};
     root /usr/share/nginx/html;
     location ~ /.well-known {
-    	allow all;
+        allow all;
     }
     location /test {
-    	return 200 'fjkvymb6len';
+        return 200 'fjkvymb6len';
     }
-	location /ip {
-		proxy_set_header Host \$host;
+    location /ip {
+        proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header REMOTE-HOST \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-		default_type text/plain;
-		return 200 \$proxy_add_x_forwarded_for;
-	}
+        default_type text/plain;
+        return 200 \$proxy_add_x_forwarded_for;
+    }
 }
 EOF
     fi
@@ -909,39 +917,39 @@ EOF
 # 修改nginx重定向配置
 updateRedirectNginxConf() {
 
-    #	if [[ ${BTPanelStatus} == "true" ]]; then
+    #   if [[ ${BTPanelStatus} == "true" ]]; then
     #
-    #		cat <<EOF >${nginxConfigPath}alone.conf
+    #       cat <<EOF >${nginxConfigPath}alone.conf
     #        server {
-    #        		listen 127.0.0.1:31300;
-    #        		server_name _;
-    #        		return 403;
+    #               listen 127.0.0.1:31300;
+    #               server_name _;
+    #               return 403;
     #        }
     #EOF
     #
-    #	elif [[ -n "${customPort}" ]]; then
-    #		cat <<EOF >${nginxConfigPath}alone.conf
+    #   elif [[ -n "${customPort}" ]]; then
+    #       cat <<EOF >${nginxConfigPath}alone.conf
     #                server {
-    #                		listen 127.0.0.1:31300;
-    #                		server_name _;
-    #                		return 403;
+    #                       listen 127.0.0.1:31300;
+    #                       server_name _;
+    #                       return 403;
     #                }
     #EOF
-    #	fi
+    #   fi
     local redirectDomain=${domain}
     if [[ -n "${customPort}" ]]; then
         redirectDomain=${domain}:${customPort}
     fi
     cat <<EOF >${nginxConfigPath}alone.conf
 server {
-	listen 80;
-	server_name ${domain};
-	return 302 https://${redirectDomain};
+    listen 80;
+    server_name ${domain};
+    return 302 https://${redirectDomain};
 }
 server {
-		listen 127.0.0.1:31300;
-		server_name _;
-		return 403;
+        listen 127.0.0.1:31300;
+        server_name _;
+        return 403;
 }
 EOF
 
@@ -949,65 +957,65 @@ EOF
 
         cat <<EOF >>${nginxConfigPath}alone.conf
 server {
-	listen 127.0.0.1:31302 http2 so_keepalive=on;
-	server_name ${domain};
-	root /usr/share/nginx/html;
+    listen 127.0.0.1:31302 http2 so_keepalive=on;
+    server_name ${domain};
+    root /usr/share/nginx/html;
 
-	client_header_timeout 1071906480m;
+    client_header_timeout 1071906480m;
     keepalive_timeout 1071906480m;
 
-	location /s/ {
-    	add_header Content-Type text/plain;
-    	alias /etc/v2ray-agent/subscribe/;
+    location /s/ {
+        add_header Content-Type text/plain;
+        alias /etc/v2ray-agent/subscribe/;
     }
 
     location /${currentPath}grpc {
-    	if (\$content_type !~ "application/grpc") {
-    		return 404;
-    	}
- 		client_max_body_size 0;
-		grpc_set_header X-Real-IP \$proxy_add_x_forwarded_for;
-		client_body_timeout 1071906480m;
-		grpc_read_timeout 1071906480m;
-		grpc_pass grpc://127.0.0.1:31301;
-	}
+        if (\$content_type !~ "application/grpc") {
+            return 404;
+        }
+        client_max_body_size 0;
+        grpc_set_header X-Real-IP \$proxy_add_x_forwarded_for;
+        client_body_timeout 1071906480m;
+        grpc_read_timeout 1071906480m;
+        grpc_pass grpc://127.0.0.1:31301;
+    }
 
-	location /${currentPath}trojangrpc {
-		if (\$content_type !~ "application/grpc") {
-            		return 404;
-		}
- 		client_max_body_size 0;
-		grpc_set_header X-Real-IP \$proxy_add_x_forwarded_for;
-		client_body_timeout 1071906480m;
-		grpc_read_timeout 1071906480m;
-		grpc_pass grpc://127.0.0.1:31304;
-	}
-	location / {
-        	add_header Strict-Transport-Security "max-age=15552000; preload" always;
+    location /${currentPath}trojangrpc {
+        if (\$content_type !~ "application/grpc") {
+                    return 404;
+        }
+        client_max_body_size 0;
+        grpc_set_header X-Real-IP \$proxy_add_x_forwarded_for;
+        client_body_timeout 1071906480m;
+        grpc_read_timeout 1071906480m;
+        grpc_pass grpc://127.0.0.1:31304;
+    }
+    location / {
+            add_header Strict-Transport-Security "max-age=15552000; preload" always;
     }
 }
 EOF
     elif echo "${selectCustomInstallType}" | grep -q 5 || [[ -z "${selectCustomInstallType}" ]]; then
         cat <<EOF >>${nginxConfigPath}alone.conf
 server {
-	listen 127.0.0.1:31302 http2;
-	server_name ${domain};
-	root /usr/share/nginx/html;
-	location /s/ {
-    		add_header Content-Type text/plain;
-    		alias /etc/v2ray-agent/subscribe/;
+    listen 127.0.0.1:31302 http2;
+    server_name ${domain};
+    root /usr/share/nginx/html;
+    location /s/ {
+            add_header Content-Type text/plain;
+            alias /etc/v2ray-agent/subscribe/;
     }
-	location /${currentPath}grpc {
-		client_max_body_size 0;
-#		keepalive_time 1071906480m;
-		keepalive_requests 4294967296;
-		client_body_timeout 1071906480m;
- 		send_timeout 1071906480m;
- 		lingering_close always;
- 		grpc_read_timeout 1071906480m;
- 		grpc_send_timeout 1071906480m;
-		grpc_pass grpc://127.0.0.1:31301;
-	}
+    location /${currentPath}grpc {
+        client_max_body_size 0;
+#       keepalive_time 1071906480m;
+        keepalive_requests 4294967296;
+        client_body_timeout 1071906480m;
+        send_timeout 1071906480m;
+        lingering_close always;
+        grpc_read_timeout 1071906480m;
+        grpc_send_timeout 1071906480m;
+        grpc_pass grpc://127.0.0.1:31301;
+    }
 }
 EOF
 
@@ -1015,55 +1023,55 @@ EOF
 
         cat <<EOF >>${nginxConfigPath}alone.conf
 server {
-	listen 127.0.0.1:31302 http2;
-	server_name ${domain};
-	root /usr/share/nginx/html;
-	location /s/ {
-    		add_header Content-Type text/plain;
-    		alias /etc/v2ray-agent/subscribe/;
+    listen 127.0.0.1:31302 http2;
+    server_name ${domain};
+    root /usr/share/nginx/html;
+    location /s/ {
+            add_header Content-Type text/plain;
+            alias /etc/v2ray-agent/subscribe/;
     }
-	location /${currentPath}trojangrpc {
-		client_max_body_size 0;
-		# keepalive_time 1071906480m;
-		keepalive_requests 4294967296;
-		client_body_timeout 1071906480m;
- 		send_timeout 1071906480m;
- 		lingering_close always;
- 		grpc_read_timeout 1071906480m;
- 		grpc_send_timeout 1071906480m;
-		grpc_pass grpc://127.0.0.1:31301;
-	}
+    location /${currentPath}trojangrpc {
+        client_max_body_size 0;
+        # keepalive_time 1071906480m;
+        keepalive_requests 4294967296;
+        client_body_timeout 1071906480m;
+        send_timeout 1071906480m;
+        lingering_close always;
+        grpc_read_timeout 1071906480m;
+        grpc_send_timeout 1071906480m;
+        grpc_pass grpc://127.0.0.1:31301;
+    }
 }
 EOF
     else
 
         cat <<EOF >>${nginxConfigPath}alone.conf
 server {
-	listen 127.0.0.1:31302 http2;
-	server_name ${domain};
-	root /usr/share/nginx/html;
-	location /s/ {
-    		add_header Content-Type text/plain;
-    		alias /etc/v2ray-agent/subscribe/;
+    listen 127.0.0.1:31302 http2;
+    server_name ${domain};
+    root /usr/share/nginx/html;
+    location /s/ {
+            add_header Content-Type text/plain;
+            alias /etc/v2ray-agent/subscribe/;
     }
-	location / {
-	}
+    location / {
+    }
 }
 EOF
     fi
 
     cat <<EOF >>${nginxConfigPath}alone.conf
 server {
-	listen 127.0.0.1:31300;
-	server_name ${domain};
-	root /usr/share/nginx/html;
-	location /s/ {
-		add_header Content-Type text/plain;
-		alias /etc/v2ray-agent/subscribe/;
-	}
-	location / {
-		add_header Strict-Transport-Security "max-age=15552000; preload" always;
-	}
+    listen 127.0.0.1:31300;
+    server_name ${domain};
+    root /usr/share/nginx/html;
+    location /s/ {
+        add_header Content-Type text/plain;
+        alias /etc/v2ray-agent/subscribe/;
+    }
+    location / {
+        add_header Strict-Transport-Security "max-age=15552000; preload" always;
+    }
 }
 EOF
 
@@ -1099,7 +1107,8 @@ checkIP() {
             portFirewallPortStatus="${customPort}"
         fi
         echoContent red " ---> 请检查防火墙规则是否开放${portFirewallPortStatus}\n"
-        read -r -p "是否通过脚本修改防火墙规则开放${portFirewallPortStatus}端口？[y/n]:" allPortFirewallStatus
+        # read -r -p "是否通过脚本修改防火墙规则开放${portFirewallPortStatus}端口？[y/n]:" allPortFirewallStatus
+        allPortFirewallStatus="y"
 
         if [[ ${allPortFirewallStatus} == "y" ]]; then
             if [[ -n "${customPort}" ]]; then
@@ -1158,7 +1167,8 @@ switchSSLType() {
         echoContent yellow "2.zerossl"
         echoContent yellow "3.buypass[不支持DNS申请]"
         echoContent red "=============================================================="
-        read -r -p "请选择[回车]使用默认:" selectSSLType
+        # read -r -p "请选择[回车]使用默认:" selectSSLType
+        selectSSLType='1'
         case ${selectSSLType} in
         1)
             sslType="letsencrypt"
@@ -1194,8 +1204,8 @@ selectAcmeInstallSSL() {
         dnsSSLStatus=true
     else
         if [[ -z "${dnsSSLStatus}" ]]; then
-            read -r -p "是否使用DNS申请证书，如不会使用DNS申请证书请输入n[y/n]:" installSSLDNStatus
-
+            # read -r -p "是否使用DNS申请证书，如不会使用DNS申请证书请输入n[y/n]:" installSSLDNStatus
+            installSSLDNStatus='n'
             if [[ ${installSSLDNStatus} == 'y' ]]; then
                 dnsSSLStatus=true
             else
@@ -1270,7 +1280,9 @@ customPortFunction() {
     if [[ -z "${currentPort}" && -z "${customPort}" ]] || [[ "${historyCustomPortStatus}" == "n" ]]; then
         echo
         echoContent yellow "请输入端口[默认: 443]，如自定义端口，只允许使用DNS申请证书[回车使用默认]"
-        read -r -p "端口:" customPort
+        # read -r -p "端口:" customPort
+        customPort=443
+        echo "端口:${customPort}"
         if [[ -n "${customPort}" && "${customPort}" != "443" ]]; then
             if ((customPort >= 1 && customPort <= 65535)); then
                 checkCustomPort
@@ -1310,7 +1322,8 @@ installTLS() {
             sudo "$HOME/.acme.sh/acme.sh" --installcert -d "${tlsDomain}" --fullchainpath "/etc/v2ray-agent/tls/${tlsDomain}.crt" --keypath "/etc/v2ray-agent/tls/${tlsDomain}.key" --ecc >/dev/null
         else
             echoContent yellow " ---> 如未过期或者自定义证书请选择[n]\n"
-            read -r -p "是否重新安装？[y/n]:" reInstallStatus
+            # read -r -p "是否重新安装？[y/n]:" reInstallStatus
+            reInstallStatus="n"
             if [[ "${reInstallStatus}" == "y" ]]; then
                 rm -rf /etc/v2ray-agent/tls/*
                 installTLS "$1"
@@ -1393,7 +1406,8 @@ randomPathFunction() {
 
     if [[ -n "${currentPath}" ]]; then
         echo
-        read -r -p "读取到上次安装记录，是否使用上次安装时的path路径 ？[y/n]:" historyPathStatus
+        # read -r -p "读取到上次安装记录，是否使用上次安装时的path路径 ？[y/n]:" historyPathStatus
+        historyPathStatus="y"
         echo
     fi
 
@@ -1402,8 +1416,8 @@ randomPathFunction() {
         echoContent green " ---> 使用成功\n"
     else
         echoContent yellow "请输入自定义路径[例: alone]，不需要斜杠，[回车]随机路径"
-        read -r -p '路径:' customPath
-
+        # read -r -p '路径:' customPath
+        customPath=""
         if [[ -z "${customPath}" ]]; then
             customPath=$(head -n 50 /dev/urandom | sed 's/[^a-z]//g' | strings -n 4 | tr '[:upper:]' '[:lower:]' | head -1)
             currentPath=${customPath:0:4}
@@ -1421,7 +1435,8 @@ nginxBlog() {
     echoContent skyBlue "\n进度 $1/${totalProgress} : 添加伪装站点"
     if [[ -d "/usr/share/nginx/html" && -f "/usr/share/nginx/html/check" ]]; then
         echo
-        read -r -p "检测到安装伪装站点，是否需要重新安装[y/n]:" nginxBlogInstallStatus
+        # read -r -p "检测到安装伪装站点，是否需要重新安装[y/n]:" nginxBlogInstallStatus
+        nginxBlogInstallStatus="y"
         if [[ "${nginxBlogInstallStatus}" == "y" ]]; then
             rm -rf /usr/share/nginx/html
             randomNum=$((RANDOM % 6 + 1))
@@ -1617,7 +1632,8 @@ installV2Ray() {
             installV2Ray "$1"
         else
             echoContent green " ---> v2ray-core版本:$(/etc/v2ray-agent/v2ray/v2ray --version | awk '{print $2}' | head -1)"
-            read -r -p "是否更新、升级？[y/n]:" reInstallV2RayStatus
+            # read -r -p "是否更新、升级？[y/n]:" reInstallV2RayStatus
+            reInstallV2RayStatus="y"
             if [[ "${reInstallV2RayStatus}" == "y" ]]; then
                 rm -f /etc/v2ray-agent/v2ray/v2ray
                 rm -f /etc/v2ray-agent/v2ray/v2ctl
@@ -1675,7 +1691,8 @@ installXray() {
         chmod 655 /etc/v2ray-agent/xray/xray
     else
         echoContent green " ---> Xray-core版本:$(/etc/v2ray-agent/xray/xray --version | awk '{print $2}' | head -1)"
-        read -r -p "是否更新、升级？[y/n]:" reInstallXrayStatus
+        # read -r -p "是否更新、升级？[y/n]:" reInstallXrayStatus
+        reInstallXrayStatus="y"
         if [[ "${reInstallXrayStatus}" == "y" ]]; then
             rm -f /etc/v2ray-agent/xray/xray
             installXray "$1"
@@ -2268,9 +2285,9 @@ initHysteriaNetwork() {
 
     cat <<EOF >/etc/v2ray-agent/hysteria/conf/client_network.json
 {
-	"hysteriaLag":"${hysteriaLag}",
-	"hysteriaClientUploadSpeed":"${hysteriaClientUploadSpeed}",
-	"hysteriaClientDownloadSpeed":"${hysteriaClientDownloadSpeed}"
+    "hysteriaLag":"${hysteriaLag}",
+    "hysteriaClientUploadSpeed":"${hysteriaClientUploadSpeed}",
+    "hysteriaClientDownloadSpeed":"${hysteriaClientDownloadSpeed}"
 }
 EOF
 
@@ -2286,22 +2303,22 @@ initHysteriaConfig() {
     getClients "${configPath}${frontingType}.json" true
     cat <<EOF >/etc/v2ray-agent/hysteria/conf/config.json
 {
-	"listen": ":${hysteriaPort}",
-	"protocol": "${hysteriaProtocol}",
-	"disable_udp": false,
-	"cert": "/etc/v2ray-agent/tls/${currentHost}.crt",
-	"key": "/etc/v2ray-agent/tls/${currentHost}.key",
-	"auth": {
-		"mode": "passwords",
-		"config": []
-	},
-	"alpn": "h3",
-	"recv_window_conn": 15728640,
-	"recv_window_client": 67108864,
-	"max_conn_client": 4096,
-	"disable_mtu_discovery": true,
-	"resolve_preference": "46",
-	"resolver": "https://8.8.8.8:443/dns-query"
+    "listen": ":${hysteriaPort}",
+    "protocol": "${hysteriaProtocol}",
+    "disable_udp": false,
+    "cert": "/etc/v2ray-agent/tls/${currentHost}.crt",
+    "key": "/etc/v2ray-agent/tls/${currentHost}.key",
+    "auth": {
+        "mode": "passwords",
+        "config": []
+    },
+    "alpn": "h3",
+    "recv_window_conn": 15728640,
+    "recv_window_client": 67108864,
+    "max_conn_client": 4096,
+    "disable_mtu_discovery": true,
+    "resolve_preference": "46",
+    "resolver": "https://8.8.8.8:443/dns-query"
 }
 EOF
 
@@ -2323,7 +2340,8 @@ initV2RayConfig() {
     fi
     local addClientsStatus=
     if [[ -n "${currentUUID}" && -z "${uuid}" ]]; then
-        read -r -p "读取到上次安装记录，是否使用上次安装时的UUID ？[y/n]:" historyUUIDStatus
+        # read -r -p "读取到上次安装记录，是否使用上次安装时的UUID ？[y/n]:" 
+        historyUUIDStatus="y"
         if [[ "${historyUUIDStatus}" == "y" ]]; then
             uuid=${currentUUID}
             addClientsStatus=true
@@ -2415,31 +2433,31 @@ EOF
         cat <<EOF >/etc/v2ray-agent/v2ray/conf/04_trojan_TCP_inbounds.json
 {
 "inbounds":[
-	{
-	  "port": 31296,
-	  "listen": "127.0.0.1",
-	  "protocol": "trojan",
-	  "tag":"trojanTCP",
-	  "settings": {
-		"clients": [
-		  {
-			"password": "${uuid}",
-			"email": "default_Trojan_TCP"
-		  }
-		],
-		"fallbacks":[
-			{"dest":"31300"}
-		]
-	  },
-	  "streamSettings": {
-		"network": "tcp",
-		"security": "none",
-		"tcpSettings": {
-			"acceptProxyProtocol": true
-		}
-	  }
-	}
-	]
+    {
+      "port": 31296,
+      "listen": "127.0.0.1",
+      "protocol": "trojan",
+      "tag":"trojanTCP",
+      "settings": {
+        "clients": [
+          {
+            "password": "${uuid}",
+            "email": "default_Trojan_TCP"
+          }
+        ],
+        "fallbacks":[
+            {"dest":"31300"}
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "none",
+        "tcpSettings": {
+            "acceptProxyProtocol": true
+        }
+      }
+    }
+    ]
 }
 EOF
         addClients "/etc/v2ray-agent/v2ray/conf/04_trojan_TCP_inbounds.json" "${addClientsStatus}"
@@ -2453,28 +2471,28 @@ EOF
 {
 "inbounds":[
     {
-	  "port": 31297,
-	  "listen": "127.0.0.1",
-	  "protocol": "vless",
-	  "tag":"VLESSWS",
-	  "settings": {
-		"clients": [
-		  {
-			"id": "${uuid}",
-			"email": "default_VLESS_WS"
-		  }
-		],
-		"decryption": "none"
-	  },
-	  "streamSettings": {
-		"network": "ws",
-		"security": "none",
-		"wsSettings": {
-		  "acceptProxyProtocol": true,
-		  "path": "/${customPath}ws"
-		}
-	  }
-	}
+      "port": 31297,
+      "listen": "127.0.0.1",
+      "protocol": "vless",
+      "tag":"VLESSWS",
+      "settings": {
+        "clients": [
+          {
+            "id": "${uuid}",
+            "email": "default_VLESS_WS"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "none",
+        "wsSettings": {
+          "acceptProxyProtocol": true,
+          "path": "/${customPath}ws"
+        }
+      }
+    }
 ]
 }
 EOF
@@ -2726,7 +2744,8 @@ initXrayConfig() {
     local uuid=
     local addClientsStatus=
     if [[ -n "${currentUUID}" ]]; then
-        read -r -p "读取到上次安装记录，是否使用上次安装时的UUID ？[y/n]:" historyUUIDStatus
+        # read -r -p "读取到上次安装记录，是否使用上次安装时的UUID ？[y/n]:" historyUUIDStatus
+        historyUUIDStatus="y"
         if [[ "${historyUUIDStatus}" == "y" ]]; then
             addClientsStatus=true
             uuid=${currentUUID}
@@ -2736,12 +2755,13 @@ initXrayConfig() {
 
     if [[ -z "${uuid}" ]]; then
         echoContent yellow "请输入自定义UUID[需合法]，[回车]随机UUID"
-        read -r -p 'UUID:' customUUID
+        # read -r -p 'UUID:' customUUID
 
-        if [[ -n ${customUUID} ]]; then
-            uuid=${customUUID}
-        else
+        customUUID=''
+        if [[ -z ${customUUID} ]]; then
             uuid=$(/etc/v2ray-agent/xray/xray uuid)
+        else
+            uuid=${customUUID}
         fi
 
     fi
@@ -2830,31 +2850,31 @@ EOF
         cat <<EOF >/etc/v2ray-agent/xray/conf/04_trojan_TCP_inbounds.json
 {
 "inbounds":[
-	{
-	  "port": 31296,
-	  "listen": "127.0.0.1",
-	  "protocol": "trojan",
-	  "tag":"trojanTCP",
-	  "settings": {
-		"clients": [
-		  {
-			"password": "${uuid}",
-			"email": "default_Trojan_TCP"
-		  }
-		],
-		"fallbacks":[
-			{"dest":"31300"}
-		]
-	  },
-	  "streamSettings": {
-		"network": "tcp",
-		"security": "none",
-		"tcpSettings": {
-			"acceptProxyProtocol": true
-		}
-	  }
-	}
-	]
+    {
+      "port": 31296,
+      "listen": "127.0.0.1",
+      "protocol": "trojan",
+      "tag":"trojanTCP",
+      "settings": {
+        "clients": [
+          {
+            "password": "${uuid}",
+            "email": "default_Trojan_TCP"
+          }
+        ],
+        "fallbacks":[
+            {"dest":"31300"}
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "none",
+        "tcpSettings": {
+            "acceptProxyProtocol": true
+        }
+      }
+    }
+    ]
 }
 EOF
         addClients "/etc/v2ray-agent/xray/conf/04_trojan_TCP_inbounds.json" "${addClientsStatus}"
@@ -2868,28 +2888,28 @@ EOF
 {
 "inbounds":[
     {
-	  "port": 31297,
-	  "listen": "127.0.0.1",
-	  "protocol": "vless",
-	  "tag":"VLESSWS",
-	  "settings": {
-		"clients": [
-		  {
-			"id": "${uuid}",
-			"email": "default_VLESS_WS"
-		  }
-		],
-		"decryption": "none"
-	  },
-	  "streamSettings": {
-		"network": "ws",
-		"security": "none",
-		"wsSettings": {
-		  "acceptProxyProtocol": true,
-		  "path": "/${customPath}ws"
-		}
-	  }
-	}
+      "port": 31297,
+      "listen": "127.0.0.1",
+      "protocol": "vless",
+      "tag":"VLESSWS",
+      "settings": {
+        "clients": [
+          {
+            "id": "${uuid}",
+            "email": "default_VLESS_WS"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "none",
+        "wsSettings": {
+          "acceptProxyProtocol": true,
+          "path": "/${customPath}ws"
+        }
+      }
+    }
 ]
 }
 EOF
@@ -3110,7 +3130,8 @@ customCDNIP() {
     echoContent yellow " 3.CNAME blog.hostmonit.com"
 
     echoContent skyBlue "----------------------------"
-    read -r -p "请选择[回车不使用]:" selectCloudflareType
+    # read -r -p "请选择[回车不使用]:" selectCloudflareType
+    selectCloudflareType=''
     case ${selectCloudflareType} in
     1)
         add="www.digitalocean.com"
@@ -3301,10 +3322,10 @@ showAccounts() {
                 echoContent skyBlue "\n ---> 账号:${email}"
                 echo
                 local path="${currentPath}ws"
-                #	if [[ ${coreInstallType} == "1" ]]; then
-                #		echoContent yellow "Xray的0-RTT path后面会有，不兼容以v2ray为核心的客户端，请手动删除后使用\n"
-                #		path="${currentPath}ws"
-                #	fi
+                #   if [[ ${coreInstallType} == "1" ]]; then
+                #       echoContent yellow "Xray的0-RTT path后面会有，不兼容以v2ray为核心的客户端，请手动删除后使用\n"
+                #       path="${currentPath}ws"
+                #   fi
                 defaultBase64Code vlessws "${email}" "$(echo "${user}" | jq -r .id)"
             done
         fi
@@ -3330,8 +3351,8 @@ showAccounts() {
         if echo ${currentInstallProtocolType} | grep -q 5; then
             echoContent skyBlue "\n=============================== VLESS gRPC TLS CDN ===============================\n"
             echoContent red "\n --->gRPC处于测试阶段，可能对你使用的客户端不兼容，如不能使用请忽略"
-            #			local serviceName
-            #			serviceName=$(jq -r .inbounds[0].streamSettings.grpcSettings.serviceName ${configPath}06_VLESS_gRPC_inbounds.json)
+            #           local serviceName
+            #           serviceName=$(jq -r .inbounds[0].streamSettings.grpcSettings.serviceName ${configPath}06_VLESS_gRPC_inbounds.json)
             jq .inbounds[0].settings.clients ${configPath}06_VLESS_gRPC_inbounds.json | jq -c '.[]' | while read -r user; do
 
                 local email=
@@ -3446,8 +3467,8 @@ backupNginxConfig() {
 }
 # 添加302配置
 addNginx302() {
-    #	local line302Result=
-    #	line302Result=$(| tail -n 1)
+    #   local line302Result=
+    #   line302Result=$(| tail -n 1)
     local count=1
     grep -n "Strict-Transport-Security" <"/etc/nginx/conf.d/alone.conf" | while read -r line; do
         if [[ -n "${line}" ]]; then
@@ -3584,18 +3605,18 @@ addCorePort() {
                     cat <<EOF >"${hysteriaFileName}"
 {
   "inbounds": [
-	{
-	  "listen": "0.0.0.0",
-	  "port": ${port},
-	  "protocol": "dokodemo-door",
-	  "settings": {
-		"address": "127.0.0.1",
-		"port": ${hysteriaPort},
-		"network": "udp",
-		"followRedirect": false
-	  },
-	  "tag": "dokodemo-door-newPort-hysteria-${port}"
-	}
+    {
+      "listen": "0.0.0.0",
+      "port": ${port},
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "127.0.0.1",
+        "port": ${hysteriaPort},
+        "network": "udp",
+        "followRedirect": false
+      },
+      "tag": "dokodemo-door-newPort-hysteria-${port}"
+    }
   ]
 }
 EOF
@@ -3603,18 +3624,18 @@ EOF
                 cat <<EOF >"${fileName}"
 {
   "inbounds": [
-	{
-	  "listen": "0.0.0.0",
-	  "port": ${port},
-	  "protocol": "dokodemo-door",
-	  "settings": {
-		"address": "127.0.0.1",
-		"port": ${settingsPort},
-		"network": "tcp",
-		"followRedirect": false
-	  },
-	  "tag": "dokodemo-door-newPort-${port}"
-	}
+    {
+      "listen": "0.0.0.0",
+      "port": ${port},
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "127.0.0.1",
+        "port": ${settingsPort},
+        "network": "tcp",
+        "followRedirect": false
+      },
+      "tag": "dokodemo-door-newPort-${port}"
+    }
   ]
 }
 EOF
@@ -3768,9 +3789,9 @@ manageUser() {
 
 # 自定义uuid
 customUUID() {
-    #	read -r -p "是否自定义UUID ？[y/n]:" customUUIDStatus
-    #	echo
-    #	if [[ "${customUUIDStatus}" == "y" ]]; then
+    #   read -r -p "是否自定义UUID ？[y/n]:" customUUIDStatus
+    #   echo
+    #   if [[ "${customUUIDStatus}" == "y" ]]; then
     read -r -p "请输入合法的UUID，[回车]随机UUID:" currentCustomUUID
     echo
     if [[ -z "${currentCustomUUID}" ]]; then
@@ -3790,14 +3811,14 @@ customUUID() {
             exit 0
         fi
     fi
-    #	fi
+    #   fi
 }
 
 # 自定义email
 customUserEmail() {
-    #	read -r -p "是否自定义email ？[y/n]:" customEmailStatus
-    #	echo
-    #	if [[ "${customEmailStatus}" == "y" ]]; then
+    #   read -r -p "是否自定义email ？[y/n]:" customEmailStatus
+    #   echo
+    #   if [[ "${customEmailStatus}" == "y" ]]; then
     read -r -p "请输入合法的email，[回车]随机email:" currentCustomEmail
     echo
     if [[ -z "${currentCustomEmail}" ]]; then
@@ -3815,7 +3836,7 @@ customUserEmail() {
             exit 0
         fi
     fi
-    #	fi
+    #   fi
 }
 
 # 添加用户
@@ -3850,7 +3871,7 @@ addUser() {
             email=${currentHost}_${uuid}
         fi
 
-        #	兼容v2ray-core
+        #   兼容v2ray-core
         users="{\"id\":\"${uuid}\",\"flow\":\"xtls-rprx-vision,none\",\"email\":\"${email}\",\"alterId\":0}"
 
         if [[ "${coreInstallType}" == "2" ]]; then
@@ -4081,7 +4102,7 @@ checkLog() {
             cat <<EOF >${configPath}00_log.json
 {
   "log": {
-  	"access":"${configPathLog}access.log",
+    "access":"${configPathLog}access.log",
     "error": "${configPathLog}error.log",
     "loglevel": "debug"
   }
@@ -4202,7 +4223,7 @@ ipv6Routing() {
           {
             "type": "field",
             "domain": [
-            	"geosite:${domainList//,/\",\"geosite:}"
+                "geosite:${domainList//,/\",\"geosite:}"
             ],
             "outboundTag": "IPv6-out"
           }
@@ -4299,7 +4320,7 @@ EOF
 
         unInstallRouting blackhole-out outboundTag bittorrent
 
-        #		unInstallOutbounds blackhole-out
+        #       unInstallOutbounds blackhole-out
 
         echoContent green " ---> BT下载打开成功"
     else
@@ -4351,7 +4372,7 @@ blacklist() {
           {
             "type": "field",
             "domain": [
-            	"geosite:${domainList//,/\",\"geosite:}"
+                "geosite:${domainList//,/\",\"geosite:}"
             ],
             "outboundTag": "blackhole-out"
           }
@@ -4446,11 +4467,11 @@ installSniffing() {
 warpRouting() {
     echoContent skyBlue "\n进度  $1/${totalProgress} : WARP分流"
     echoContent red "=============================================================="
-    #	echoContent yellow "# 注意事项\n"
-    #	echoContent yellow "1.官方warp经过几轮测试有bug，重启会导致warp失效，并且无法启动，也有可能CPU使用率暴涨"
-    #	echoContent yellow "2.不重启机器可正常使用，如果非要使用官方warp，建议不重启机器"
-    #	echoContent yellow "3.有的机器重启后仍正常使用"
-    #	echoContent yellow "4.重启后无法使用，也可卸载重新安装"
+    #   echoContent yellow "# 注意事项\n"
+    #   echoContent yellow "1.官方warp经过几轮测试有bug，重启会导致warp失效，并且无法启动，也有可能CPU使用率暴涨"
+    #   echoContent yellow "2.不重启机器可正常使用，如果非要使用官方warp，建议不重启机器"
+    #   echoContent yellow "3.有的机器重启后仍正常使用"
+    #   echoContent yellow "4.重启后无法使用，也可卸载重新安装"
     # 安装warp
     if [[ -z $(which warp-cli) ]]; then
         echo
@@ -4496,7 +4517,7 @@ warpRouting() {
           {
             "type": "field",
             "domain": [
-            	"geosite:${domainList//,/\",\"geosite:}"
+                "geosite:${domainList//,/\",\"geosite:}"
             ],
             "outboundTag": "warp-socks-out"
           }
@@ -4533,7 +4554,7 @@ EOF
 streamingToolbox() {
     echoContent skyBlue "\n功能 1/${totalProgress} : 流媒体工具箱"
     echoContent red "\n=============================================================="
-    #	echoContent yellow "1.Netflix检测"
+    #   echoContent yellow "1.Netflix检测"
     echoContent yellow "1.任意门落地机解锁流媒体"
     echoContent yellow "2.DNS解锁流媒体"
     echoContent yellow "3.VMess+WS+TLS解锁流媒体"
@@ -4763,7 +4784,7 @@ setDokodemoDoorUnblockStreamingMediaInbounds() {
     echoContent yellow "5.每次添加都是重新添加，不会保留上次域名"
     echoContent yellow "6.ip录入示例:1.1.1.1,1.1.1.2"
     echoContent yellow "7.下面的域名一定要和出站的vps一致"
-    #	echoContent yellow "8.如有防火墙请手动开启22387、22388端口"
+    #   echoContent yellow "8.如有防火墙请手动开启22387、22388端口"
     echoContent yellow "8.域名录入示例:netflix,disney,hulu\n"
     read -r -p "请输入允许访问该解锁 vps的IP:" setIPs
     if [[ -n "${setIPs}" ]]; then
@@ -4853,7 +4874,7 @@ EOF
                 "rules": [
                   {
                     "source": [
-                    	"${setIPs//,/\",\"}"
+                        "${setIPs//,/\",\"}"
                     ],
                     "type": "field",
                     "inboundTag": [
@@ -4864,7 +4885,7 @@ EOF
                   },
                   {
                     "domains": [
-                    	"geosite:${domainList//,/\",\"geosite:}"
+                        "geosite:${domainList//,/\",\"geosite:}"
                     ],
                     "type": "field",
                     "inboundTag": [
@@ -4973,48 +4994,48 @@ setUnlockDNS() {
         if [[ "${domainList}" == "1" ]]; then
             cat <<EOF >${configPath}11_dns.json
             {
-            	"dns": {
-            		"servers": [
-            			{
-            				"address": "${setDNS}",
-            				"port": 53,
-            				"domains": [
-            					"geosite:netflix",
-            					"geosite:bahamut",
-            					"geosite:hulu",
-            					"geosite:hbo",
-            					"geosite:disney",
-            					"geosite:bbc",
-            					"geosite:4chan",
-            					"geosite:fox",
-            					"geosite:abema",
-            					"geosite:dmm",
-            					"geosite:niconico",
-            					"geosite:pixiv",
-            					"geosite:bilibili",
-            					"geosite:viu"
-            				]
-            			},
-            		"localhost"
-            		]
-            	}
+                "dns": {
+                    "servers": [
+                        {
+                            "address": "${setDNS}",
+                            "port": 53,
+                            "domains": [
+                                "geosite:netflix",
+                                "geosite:bahamut",
+                                "geosite:hulu",
+                                "geosite:hbo",
+                                "geosite:disney",
+                                "geosite:bbc",
+                                "geosite:4chan",
+                                "geosite:fox",
+                                "geosite:abema",
+                                "geosite:dmm",
+                                "geosite:niconico",
+                                "geosite:pixiv",
+                                "geosite:bilibili",
+                                "geosite:viu"
+                            ]
+                        },
+                    "localhost"
+                    ]
+                }
             }
 EOF
         elif [[ -n "${domainList}" ]]; then
             cat <<EOF >${configPath}11_dns.json
                         {
-                        	"dns": {
-                        		"servers": [
-                        			{
-                        				"address": "${setDNS}",
-                        				"port": 53,
-                        				"domains": [
-                        					"geosite:${domainList//,/\",\"geosite:}"
-                        				]
-                        			},
-                        		"localhost"
-                        		]
-                        	}
+                            "dns": {
+                                "servers": [
+                                    {
+                                        "address": "${setDNS}",
+                                        "port": 53,
+                                        "domains": [
+                                            "geosite:${domainList//,/\",\"geosite:}"
+                                        ]
+                                    },
+                                "localhost"
+                                ]
+                            }
                         }
 EOF
         fi
@@ -5034,11 +5055,11 @@ EOF
 removeUnlockDNS() {
     cat <<EOF >${configPath}11_dns.json
 {
-	"dns": {
-		"servers": [
-			"localhost"
-		]
-	}
+    "dns": {
+        "servers": [
+            "localhost"
+        ]
+    }
 }
 EOF
     reloadCore
@@ -5158,7 +5179,9 @@ selectCoreInstall() {
     echoContent yellow "1.Xray-core"
     echoContent yellow "2.v2ray-core"
     echoContent red "=============================================================="
-    read -r -p "请选择:" selectCoreType
+    # read -r -p "请选择:" selectCoreType
+    selectCoreType=1
+    echo "请选择:${selectCoreType}"
     case ${selectCoreType} in
     1)
         if [[ "${selectInstallType}" == "2" ]]; then
@@ -5205,7 +5228,7 @@ v2rayCoreInstall() {
 
     installTLS 4
     handleNginx stop
-    #	initNginxConfig 5
+    #   initNginxConfig 5
     randomPathFunction 5
     # 安装V2Ray
     installV2Ray 6
@@ -5494,7 +5517,9 @@ menu() {
     echoContent red "=============================================================="
     mkdirTools
     aliasInstall
-    read -r -p "请选择:" selectInstallType
+    # read -r -p "请选择:" selectInstallType
+    selectInstallType="1"
+    echo "请选择:${selectInstallType}"
     case ${selectInstallType} in
     1)
         selectCoreInstall
