@@ -5,8 +5,6 @@
 export LANG=en_US.UTF-8
 
 subdomain=$1
-m_uuid=$2
-m_path=$3
 
 echoContent() {
     case $1 in
@@ -1419,7 +1417,7 @@ randomPathFunction() {
     else
         echoContent yellow "请输入自定义路径[例: alone]，不需要斜杠，[回车]随机路径"
         # read -r -p '路径:' customPath
-        customPath=${m_path}
+        customPath=''
         if [[ -z "${customPath}" ]]; then
             customPath=$(head -n 50 /dev/urandom | sed 's/[^a-z]//g' | strings -n 4 | tr '[:upper:]' '[:lower:]' | head -1)
             currentPath=${customPath:0:4}
@@ -2332,7 +2330,8 @@ initV2RayConfig() {
     echoContent skyBlue "\n进度 $2/${totalProgress} : 初始化V2Ray配置"
     echo
 
-    read -r -p "是否自定义UUID ？[y/n]:" customUUIDStatus
+    # read -r -p "是否自定义UUID ？[y/n]:" customUUIDStatus
+    customUUIDStatus="n"
     echo
     if [[ "${customUUIDStatus}" == "y" ]]; then
         read -r -p "请输入合法的UUID:" currentCustomUUID
@@ -2759,7 +2758,7 @@ initXrayConfig() {
         echoContent yellow "请输入自定义UUID[需合法]，[回车]随机UUID"
         # read -r -p 'UUID:' customUUID
 
-        customUUID=${m_uuid}
+        customUUID=""
         if [[ -z ${customUUID} ]]; then
             uuid=$(/etc/v2ray-agent/xray/xray uuid)
         else
@@ -3133,7 +3132,7 @@ customCDNIP() {
 
     echoContent skyBlue "----------------------------"
     # read -r -p "请选择[回车不使用]:" selectCloudflareType
-    selectCloudflareType=''
+    selectCloudflareType=""
     case ${selectCloudflareType} in
     1)
         add="www.digitalocean.com"
@@ -5182,7 +5181,7 @@ selectCoreInstall() {
     echoContent yellow "2.v2ray-core"
     echoContent red "=============================================================="
     # read -r -p "请选择:" selectCoreType
-    selectCoreType=1
+    selectCoreType="1"
     echo "请选择:${selectCoreType}"
     case ${selectCoreType} in
     1)
